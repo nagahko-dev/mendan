@@ -291,7 +291,7 @@ function bookRender() {
     var date=new Date(bookYear,bookMonth,d);
     var ds=toDS(date);
     var dow=date.getDay();
-    var isPast=date<minDate, isWe=dow===0||dow===6, isToday=date.getTime()===today.getTime();
+    var isPast=date<minDate, isWe=false, isToday=date.getTime()===today.getTime();
     var booked=bookings.filter(function(b){return b.date===ds;}).map(function(b){return b.time;});
     var allowedTimes=schedule[ds]||[];
     var avail=allowedTimes.filter(function(t){return booked.indexOf(t)===-1;});
@@ -300,7 +300,7 @@ function bookRender() {
 
     var cell=document.createElement("div");
     var cls="cal-cell";
-    if(isPast||isWe) cls+=" off";
+    if(isPast) cls+=" off";
     else if(notSet) cls+=" off";
     else if(isFull) cls+=" full";
     else cls+=" avail";
@@ -309,7 +309,7 @@ function bookRender() {
     cell.className=cls;
 
     var html='<div class="cal-dnum">'+d+'</div>';
-    if(!isPast&&!isWe&&!notSet){
+    if(!isPast&&!notSet){
       if(isFull){
         html+='<div class="cal-full-lbl">満席</div>';
       } else {
@@ -420,26 +420,23 @@ function admRender(){
     var date=new Date(admYear,admMonth,d);
     var ds=toDS(date);
     var dow=date.getDay();
-    var isWe=dow===0||dow===6;
+    var isWe=false;
     var isToday=date.getTime()===today.getTime();
     var times=schedule[ds]||[];
     var isSet=times.length>0;
 
     var cell=document.createElement("div");
     var cls="adm-cell";
-    if(isWe) cls+=" adm-off";
-    else if(isSet) cls+=" adm-set";
+    if(isSet) cls+=" adm-set";
     else cls+=" adm-noset";
     if(isToday) cls+=" today";
     if(admSelDate===ds) cls+=" adm-sel";
     cell.className=cls;
 
     var html='<div class="adm-dnum">'+d+'</div>';
-    if(!isWe){
-      if(isSet) html+='<div class="adm-cnt" style="font-size:10px">'+times.length+'枠</div>';
-      else html+='<div class="adm-cnt" style="font-size:10px">未設定</div>';
-      cell.onclick=(function(ds2,dt2){return function(){admSelect(ds2,dt2);};})(ds,date);
-    }
+    if(isSet) html+='<div class="adm-cnt" style="font-size:10px">'+times.length+'枠</div>';
+    else html+='<div class="adm-cnt" style="font-size:10px">未設定</div>';
+    cell.onclick=(function(ds2,dt2){return function(){admSelect(ds2,dt2);};})(ds,date);
     cell.innerHTML=html;
     grid.appendChild(cell);
   }
