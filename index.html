@@ -1,151 +1,579 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>面談予約システム</title>
-    <style>
-        body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; }
-        .container { max-width: 450px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #185FA5; font-size: 24px; text-align: center; margin-bottom: 20px; }
-        label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; }
-        input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        button { margin-top: 25px; width: 100%; padding: 12px; background-color: #185FA5; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
-        button:hover { background-color: #12467a; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        #message { margin-top: 20px; padding: 15px; border-radius: 6px; display: none; text-align: center; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面談予約</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Helvetica Neue",Arial,sans-serif;background:#f0f2f5;color:#333;padding:16px}
+.box{max-width:520px;margin:0 auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.1)}
+/* タブ */
+.tabs{display:flex;gap:4px;background:#f0f2f5;padding:4px;border-radius:8px;margin-bottom:20px}
+.tab{flex:1;padding:8px;font-size:13px;border:none;background:transparent;cursor:pointer;border-radius:6px;color:#666;font-family:inherit}
+.tab.on{background:white;color:#185FA5;font-weight:bold;box-shadow:0 1px 4px rgba(0,0,0,0.1)}
+/* カレンダー共通 */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nbtn{background:none;border:1px solid #ddd;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:16px;color:#555}
+.cal-nbtn:hover{background:#f0f2f5}
+.cal-month{font-size:16px;font-weight:bold;color:#185FA5}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
+.cal-dname{text-align:center;font-size:11px;font-weight:bold;color:#999;padding:4px 0}
+.cal-dname.s0{color:#e74c3c}
+.cal-dname.s6{color:#3498db}
+/* 予約フォーム用セル */
+.cal-cell{border-radius:8px;font-size:12px;border:2px solid transparent;padding:3px 2px;min-height:62px;display:flex;flex-direction:column;align-items:center;cursor:default;transition:all 0.15s}
+.cal-cell.avail{background:#e8f5e9;color:#2e7d32;cursor:pointer}
+.cal-cell.avail:hover{background:#c8e6c9;border-color:#4caf50}
+.cal-cell.full{background:#f5f5f5;color:#bbb;cursor:not-allowed}
+.cal-cell.off{color:#ccc}
+.cal-cell.noset{background:#fff8e1;color:#f57c00}
+.cal-cell.sel{background:#185FA5 !important;color:white !important;border-color:#0d47a1 !important}
+.cal-dnum{font-size:13px;font-weight:bold;margin-bottom:2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-cell.today .cal-dnum{border:2px solid #185FA5;border-radius:50%}
+.cal-cell.sel .cal-dnum{border-color:white}
+.cal-times{display:flex;flex-direction:column;gap:1px;width:100%}
+.cal-t{font-size:10px;background:rgba(255,255,255,0.7);border-radius:3px;padding:1px 3px;text-align:center;color:#2e7d32}
+.cal-cell.sel .cal-t{background:rgba(255,255,255,0.25);color:white}
+.cal-full-lbl{font-size:10px;color:#bbb;margin-top:2px}
+.cal-more{font-size:10px;color:#888}
+.cal-cell.sel .cal-more{color:rgba(255,255,255,0.8)}
+/* 管理用セル */
+.adm-cell{border-radius:8px;font-size:11px;border:2px solid transparent;padding:3px 2px;min-height:56px;display:flex;flex-direction:column;align-items:center;cursor:default;transition:all 0.15s}
+.adm-cell.adm-set{background:#e8f5e9;color:#2e7d32;cursor:pointer}
+.adm-cell.adm-set:hover{background:#c8e6c9;border-color:#4caf50}
+.adm-cell.adm-noset{background:#fff8e1;color:#f57c00;cursor:pointer}
+.adm-cell.adm-noset:hover{background:#ffe082;border-color:#ffc107}
+.adm-cell.adm-off{color:#ccc}
+.adm-cell.adm-sel{background:#185FA5 !important;color:white !important;border-color:#0d47a1 !important}
+.adm-dnum{font-size:13px;font-weight:bold;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+.adm-cell.today .adm-dnum{border:2px solid #185FA5;border-radius:50%}
+.adm-cell.adm-sel .adm-dnum{border-color:white}
+.adm-cnt{font-size:10px}
+/* 凡例 */
+.legend{display:flex;gap:10px;margin:8px 0 16px;font-size:11px;color:#666;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:3px}
+.legend-box{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+/* フォーム */
+.form-sec{margin-top:16px;border-top:1px solid #eee;padding-top:16px}
+.date-lbl{background:#e8f0fe;color:#185FA5;padding:8px 14px;border-radius:6px;font-weight:bold;font-size:14px;margin-bottom:14px;text-align:center}
+.m-label{display:block;margin-top:14px;font-weight:bold;font-size:14px;color:#333}
+.m-input{width:100%;padding:10px;margin-top:5px;border:1px solid #ddd;border-radius:6px;font-size:16px;color:#333;background:#fff}
+.m-input:focus{outline:none;border-color:#185FA5}
+.m-btn{margin-top:16px;width:100%;padding:12px;background:#185FA5;color:white;border:none;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.m-btn:hover{background:#12467a}
+.m-btn:disabled{background:#ccc;cursor:not-allowed}
+.m-btn.danger{background:#e53935}
+.m-btn.danger:hover{background:#b71c1c}
+.m-msg{margin-top:14px;padding:12px;border-radius:6px;display:none;text-align:center;font-weight:bold;font-size:14px}
+.m-loading{text-align:center;color:#999;font-size:13px;padding:20px 0}
+/* 時間グリッド */
+.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.time-chk{display:flex;align-items:center;gap:4px;font-size:13px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;cursor:pointer;background:#fff}
+.time-chk input{cursor:pointer;width:16px;height:16px}
+.time-chk.checked{background:#e8f5e9;border-color:#4caf50;color:#2e7d32;font-weight:bold}
+/* 予約リスト */
+.bk-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.bk-item{background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.bk-info{flex:1;min-width:0}
+.bk-name{font-size:14px;font-weight:bold}
+.bk-meta{font-size:12px;color:#888;margin-top:2px}
+.bk-del{width:28px;height:28px;border:1px solid #ddd;background:transparent;border-radius:6px;cursor:pointer;font-size:14px;color:#bbb;flex-shrink:0}
+.bk-del:hover{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+.status-sel{font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:6px;background:#fff;font-family:inherit;cursor:pointer}
+/* ログイン */
+.login-wrap{max-width:320px;margin:0 auto;padding:10px 0}
+.login-title{font-size:16px;font-weight:bold;text-align:center;margin-bottom:16px;color:#333}
+.section-title{font-size:13px;font-weight:bold;color:#555;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #eee}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.sum-card{background:#f5f5f3;border-radius:8px;padding:10px;text-align:center}
+.sum-num{font-size:20px;font-weight:bold}
+.sum-lbl{font-size:11px;color:#888}
+.logout-btn{font-size:12px;padding:5px 12px;border:1px solid #ddd;background:transparent;border-radius:6px;cursor:pointer;color:#666}
+.adm-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filter-btn{padding:4px 12px;font-size:12px;border:1px solid #ddd;background:#fff;border-radius:20px;cursor:pointer;color:#666}
+.filter-btn.on{background:#185FA5;color:#fff;border-color:#185FA5;font-weight:bold}
+.set-times-lbl{font-size:12px;color:#2e7d32;margin-top:2px}
+.adm-cell.adm-sel .set-times-lbl{color:rgba(255,255,255,0.9)}
+</style>
 </head>
 <body>
+<div class="box">
 
-<div class="container">
-    <h1>📅 面談予約フォーム</h1>
-    <form id="reservationForm">
-        <label for="date">希望日</label>
-        <input type="date" id="date" required>
+  <!-- タブ -->
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('book')">📅 予約フォーム</button>
+    <button class="tab" onclick="switchTab('admin')">🔒 管理画面</button>
+  </div>
 
-        <label for="time">希望時間</label>
-        <select id="time" required disabled>
-            <option value="">先に日付を選んでください</option>
-        </select>
+  <!-- ========== 予約フォーム ========== -->
+  <div id="tabBook">
+    <div class="cal-nav">
+      <button class="cal-nbtn" onclick="bookPrev()">&#8249;</button>
+      <span class="cal-month" id="bookTitle"></span>
+      <button class="cal-nbtn" onclick="bookNext()">&#8250;</button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-dname s0">日</div><div class="cal-dname">月</div><div class="cal-dname">火</div>
+      <div class="cal-dname">水</div><div class="cal-dname">木</div><div class="cal-dname">金</div><div class="cal-dname s6">土</div>
+    </div>
+    <div class="cal-grid" id="bookGrid"></div>
+    <div id="bookLoading" class="m-loading">空き状況を読み込み中...</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-box" style="background:#e8f5e9;border:1px solid #4caf50"></div>空きあり</div>
+      <div class="legend-item"><div class="legend-box" style="background:#f5f5f5;border:1px solid #ddd"></div>満席</div>
+      <div class="legend-item"><div class="legend-box" style="background:#185FA5"></div>選択中</div>
+    </div>
+    <div class="form-sec" id="bookForm" style="display:none">
+      <div class="date-lbl" id="bookDateLbl"></div>
+      <label class="m-label">希望時間</label>
+      <select class="m-input" id="bookTime"><option value="">時間を選択してください</option></select>
+      <label class="m-label">お子様氏名</label>
+      <input class="m-input" type="text" id="bookName" placeholder="山田 太郎">
+      <label class="m-label">備考（あれば）</label>
+      <textarea class="m-input" id="bookNote" rows="3"></textarea>
+      <button class="m-btn" id="bookSubmit" onclick="submitBooking()">予約を確定する</button>
+    </div>
+    <div class="m-msg" id="bookMsg"></div>
+  </div>
 
-        <label for="name">お子様氏名</label>
-        <input type="text" id="name" placeholder="山田 太郎" required>
+  <!-- ========== 管理画面 ========== -->
+  <div id="tabAdmin" style="display:none">
 
-        <label for="note">備考（あれば）</label>
-        <textarea id="note" rows="3"></textarea>
+    <!-- ログイン前 -->
+    <div id="adminLogin">
+      <div class="login-wrap">
+        <div class="login-title">管理者ログイン</div>
+        <div id="loginErr" class="m-msg" style="background:#f8d7da;color:#721c24"></div>
+        <label class="m-label">パスワード</label>
+        <input class="m-input" type="password" id="adminPass" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')adminLogin()">
+        <button class="m-btn" style="margin-top:12px" onclick="adminLogin()">ログイン</button>
+      </div>
+    </div>
 
-        <button type="submit" id="submitBtn">予約を確定する</button>
-    </form>
-    <div id="message"></div>
+    <!-- ログイン後 -->
+    <div id="adminMain" style="display:none">
+      <div class="adm-hd">
+        <span style="font-size:15px;font-weight:bold;color:#333">管理画面</span>
+        <button class="logout-btn" onclick="adminLogout()">ログアウト</button>
+      </div>
+
+      <!-- サマリー -->
+      <div class="summary" id="admSummary"></div>
+
+      <!-- タブ：日程設定 / 予約一覧 -->
+      <div class="tabs" style="margin-bottom:16px">
+        <button class="tab on" id="admTab1" onclick="switchAdmTab('schedule')">📆 日程設定</button>
+        <button class="tab" id="admTab2" onclick="switchAdmTab('bookings')">📋 予約一覧</button>
+      </div>
+
+      <!-- 日程設定 -->
+      <div id="admSchedule">
+        <div class="cal-nav">
+          <button class="cal-nbtn" onclick="admPrev()">&#8249;</button>
+          <span class="cal-month" id="admTitle"></span>
+          <button class="cal-nbtn" onclick="admNext()">&#8250;</button>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-dname s0">日</div><div class="cal-dname">月</div><div class="cal-dname">火</div>
+          <div class="cal-dname">水</div><div class="cal-dname">木</div><div class="cal-dname">金</div><div class="cal-dname s6">土</div>
+        </div>
+        <div class="cal-grid" id="admGrid"></div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-box" style="background:#e8f5e9;border:1px solid #4caf50"></div>時間設定済み</div>
+          <div class="legend-item"><div class="legend-box" style="background:#fff8e1;border:1px solid #ffc107"></div>未設定</div>
+        </div>
+        <div class="form-sec" id="admForm" style="display:none">
+          <div class="date-lbl" id="admDateLbl"></div>
+          <div class="section-title">受付時間を選択（チェックを入れた時間のみ予約可能）</div>
+          <div class="time-grid" id="admTimeGrid"></div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="m-btn" style="flex:2" onclick="saveSchedule()">この日の設定を保存</button>
+            <button class="m-btn danger" style="flex:1" onclick="deleteSchedule()">休業日にする</button>
+          </div>
+        </div>
+        <div class="m-msg" id="admMsg"></div>
+      </div>
+
+      <!-- 予約一覧 -->
+      <div id="admBookings" style="display:none">
+        <div class="filter-row" id="admFilter"></div>
+        <div id="admBkList"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-    // ==========================================
-    // 設定エリア
-    // ==========================================
-    var GAS_URL = "https://script.google.com/macros/s/AKfycbwHojwQQlo8O3vfk6g30xjsdNlu5PkCTJX24krufTII-EeZUneCsi-RAg7A86Ac-mxFCQ/exec";
+// ==========================================
+// 設定
+// ==========================================
+var GAS_URL = "https://script.google.com/macros/s/AKfycbwHojwQQlo8O3vfk6g30xjsdNlu5PkCTJX24krufTII-EeZUneCsi-RAg7A86Ac-mxFCQ/exec";
+var ALL_TIMES = ["09:00","09:30","10:00","10:30","11:00","11:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30"];
+var MIN_DAYS = 2;
+var MAX_SHOW = 3;
+var ADMIN_PASS = "admin1234";
+var STATUSES = ["未確認","確認済","完了","キャンセル"];
+var STATUS_C = {"未確認":"#E6F1FB,#185FA5","確認済":"#EAF3DE,#3B6D11","完了":"#f0f0f0,#555","キャンセル":"#FCEBEB,#A32D2D"};
 
-    // 選択肢として表示する時間帯
-    const AVAILABLE_TIMES = ["10:00", "11:00", "13:00", "14:00", "15:00"];
+// ==========================================
+// 状態
+// ==========================================
+var bookings = [], schedule = {};
+var bookYear = new Date().getFullYear(), bookMonth = new Date().getMonth();
+var admYear = new Date().getFullYear(), admMonth = new Date().getMonth();
+var bookSelDate = null, admSelDate = null;
+var authed = false, admFilter = "すべて";
 
-    // ==========================================
-    // 予約状況のチェック処理
-    // ==========================================
-    const dateInput = document.getElementById('date');
-    const timeSelect = document.getElementById('time');
-
-    dateInput.addEventListener('change', function() {
-        const selectedDate = this.value;
-        if (!selectedDate) return;
-
-        timeSelect.disabled = true;
-        timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
-
-        fetch(GAS_URL + "?action=list")
-            .then(res => res.json())
-            .then(data => {
-                const bookings = data.bookings || [];
-
-                const bookedTimes = bookings
-                    .filter(b => b.date === selectedDate)
-                    .map(b => b.time);
-
-                timeSelect.innerHTML = '<option value="">時間を選択してください</option>';
-
-                AVAILABLE_TIMES.forEach(t => {
-                    if (bookedTimes.includes(t)) return; // 予約済みは表示しない
-                    const option = document.createElement('option');
-                    option.value = t;
-                    option.text = t;
-                    timeSelect.appendChild(option);
-                });
-
-                // 空きがない場合
-                if (timeSelect.options.length === 1) {
-                    timeSelect.innerHTML = '<option value="">この日は満席です</option>';
-                }
-
-                timeSelect.disabled = false;
-            })
-            .catch(err => {
-                timeSelect.innerHTML = '<option value="">読み込み失敗。再試行してください</option>';
-                timeSelect.disabled = false;
-            });
+// ==========================================
+// 初期化
+// ==========================================
+function init() {
+  fetch(GAS_URL + "?action=list")
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      bookings = d.bookings || [];
+      return fetch(GAS_URL + "?action=getSchedule");
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      schedule = d.schedule || {};
+      document.getElementById("bookLoading").style.display = "none";
+      bookRender();
+    })
+    .catch(function(){
+      document.getElementById("bookLoading").innerText = "読み込み失敗。ページを再読み込みしてください。";
     });
+}
+init();
 
-    // ==========================================
-    // 送信処理
-    // ==========================================
-    document.getElementById('reservationForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        var btn = document.getElementById('submitBtn');
-        var msg = document.getElementById('message');
+// ==========================================
+// タブ切り替え
+// ==========================================
+function switchTab(t) {
+  document.getElementById("tabBook").style.display = t==="book"?"block":"none";
+  document.getElementById("tabAdmin").style.display = t==="admin"?"block":"none";
+  document.querySelectorAll(".tabs .tab").forEach(function(el,i){ el.className = "tab" + ((t==="book"&&i===0)||(t==="admin"&&i===1)?" on":""); });
+}
 
-        btn.disabled = true;
-        btn.innerText = "送信中...";
-        msg.style.display = "none";
+function switchAdmTab(t) {
+  document.getElementById("admSchedule").style.display = t==="schedule"?"block":"none";
+  document.getElementById("admBookings").style.display = t==="bookings"?"block":"none";
+  document.getElementById("admTab1").className = "tab" + (t==="schedule"?" on":"");
+  document.getElementById("admTab2").className = "tab" + (t==="bookings"?" on":"");
+  if(t==="bookings") renderBkList();
+}
 
-        var data = {
-            action: "add",
-            booking: {
-                date: document.getElementById('date').value,
-                time: document.getElementById('time').value,
-                name: document.getElementById('name').value,
-                note: document.getElementById('note').value
-            }
-        };
+// ==========================================
+// ユーティリティ
+// ==========================================
+function toDS(date){ return date.getFullYear()+"-"+("0"+(date.getMonth()+1)).slice(-2)+"-"+("0"+date.getDate()).slice(-2); }
+function fmtDate(ds){ var d=new Date(ds+"T00:00:00"),days=["日","月","火","水","木","金","土"]; return(d.getMonth()+1)+"月"+d.getDate()+"日（"+days[d.getDay()]+"）"; }
 
-        fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify(data)
-        })
-        .then(res => res.json())
-        .then(result => {
-            if (result.status === "ok") {
-                msg.style.display = "block";
-                msg.style.backgroundColor = "#d4edda";
-                msg.style.color = "#155724";
-                msg.innerText = "予約が完了しました！";
-                document.getElementById('reservationForm').reset();
-                timeSelect.disabled = true;
-                timeSelect.innerHTML = '<option value="">先に日付を選んでください</option>';
-            } else {
-                throw new Error();
-            }
-        })
-        .catch(err => {
-            msg.style.display = "block";
-            msg.style.backgroundColor = "#f8d7da";
-            msg.style.color = "#721c24";
-            msg.innerText = "エラーが発生しました。もう一度お試しください。";
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerText = "予約を確定する";
-        });
+// ==========================================
+// 予約フォーム：カレンダー描画
+// ==========================================
+function bookRender() {
+  var grid = document.getElementById("bookGrid");
+  grid.innerHTML = "";
+  document.getElementById("bookTitle").innerText = bookYear+"年 "+(bookMonth+1)+"月";
+
+  var today = new Date(); today.setHours(0,0,0,0);
+  var minDate = new Date(today); minDate.setDate(minDate.getDate()+MIN_DAYS);
+  var firstDay = new Date(bookYear,bookMonth,1).getDay();
+  var dim = new Date(bookYear,bookMonth+1,0).getDate();
+
+  for(var i=0;i<firstDay;i++){ var e=document.createElement("div");e.className="cal-cell";grid.appendChild(e); }
+
+  for(var d=1;d<=dim;d++){
+    var date=new Date(bookYear,bookMonth,d);
+    var ds=toDS(date);
+    var dow=date.getDay();
+    var isPast=date<minDate, isWe=dow===0||dow===6, isToday=date.getTime()===today.getTime();
+    var booked=bookings.filter(function(b){return b.date===ds;}).map(function(b){return b.time;});
+    var allowedTimes=schedule[ds]||[];
+    var avail=allowedTimes.filter(function(t){return booked.indexOf(t)===-1;});
+    var isFull=allowedTimes.length>0&&avail.length===0;
+    var notSet=allowedTimes.length===0;
+
+    var cell=document.createElement("div");
+    var cls="cal-cell";
+    if(isPast||isWe) cls+=" off";
+    else if(notSet) cls+=" off";
+    else if(isFull) cls+=" full";
+    else cls+=" avail";
+    if(isToday) cls+=" today";
+    if(bookSelDate===ds) cls+=" sel";
+    cell.className=cls;
+
+    var html='<div class="cal-dnum">'+d+'</div>';
+    if(!isPast&&!isWe&&!notSet){
+      if(isFull){
+        html+='<div class="cal-full-lbl">満席</div>';
+      } else {
+        html+='<div class="cal-times">';
+        var show=avail.slice(0,MAX_SHOW);
+        for(var ti=0;ti<show.length;ti++) html+='<div class="cal-t">'+show[ti]+'</div>';
+        if(avail.length>MAX_SHOW) html+='<div class="cal-more">+'+(avail.length-MAX_SHOW)+'枠</div>';
+        html+='</div>';
+        cell.onclick=(function(ds2,dt2,av2){return function(){bookSelect(ds2,dt2,av2);};})(ds,date,avail);
+      }
+    }
+    cell.innerHTML=html;
+    grid.appendChild(cell);
+  }
+}
+
+function bookSelect(ds,dateObj,avail){
+  bookSelDate=ds; bookRender();
+  document.getElementById("bookDateLbl").innerText=fmtDate(ds)+" の予約";
+  var sel=document.getElementById("bookTime");
+  sel.innerHTML='<option value="">時間を選択してください</option>';
+  for(var i=0;i<avail.length;i++){var o=document.createElement("option");o.value=avail[i];o.text=avail[i];sel.appendChild(o);}
+  document.getElementById("bookForm").style.display="block";
+  document.getElementById("bookMsg").style.display="none";
+  document.getElementById("bookForm").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function bookPrev(){ bookMonth--; if(bookMonth<0){bookMonth=11;bookYear--;} bookSelDate=null; document.getElementById("bookForm").style.display="none"; bookRender(); }
+function bookNext(){ bookMonth++; if(bookMonth>11){bookMonth=0;bookYear++;} bookSelDate=null; document.getElementById("bookForm").style.display="none"; bookRender(); }
+
+// ==========================================
+// 予約送信
+// ==========================================
+function submitBooking(){
+  var btn=document.getElementById("bookSubmit");
+  var msg=document.getElementById("bookMsg");
+  var time=document.getElementById("bookTime").value;
+  var name=document.getElementById("bookName").value;
+  if(!bookSelDate||!time||!name){
+    showMsg("bookMsg","日付・時間・お名前を入力してください。",false);return;
+  }
+  btn.disabled=true;btn.innerText="送信中...";msg.style.display="none";
+  fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"add",booking:{date:bookSelDate,time:time,name:name,note:document.getElementById("bookNote").value}})})
+    .then(function(r){return r.json();})
+    .then(function(result){
+      if(result.status==="ok"){
+        showMsg("bookMsg","予約が完了しました！",true);
+        bookings.push({date:bookSelDate,time:time});
+        bookSelDate=null;
+        document.getElementById("bookForm").style.display="none";
+        document.getElementById("bookName").value="";
+        document.getElementById("bookNote").value="";
+        bookRender();
+      } else {
+        showMsg("bookMsg",result.message||"エラーが発生しました。",false);
+      }
+    })
+    .catch(function(){ showMsg("bookMsg","通信エラーが発生しました。",false); })
+    .finally(function(){btn.disabled=false;btn.innerText="予約を確定する";});
+}
+
+// ==========================================
+// 管理者ログイン
+// ==========================================
+function adminLogin(){
+  var pass=document.getElementById("adminPass").value;
+  if(pass===ADMIN_PASS){
+    authed=true;
+    document.getElementById("adminLogin").style.display="none";
+    document.getElementById("adminMain").style.display="block";
+    renderSummary();
+    admRender();
+  } else {
+    var err=document.getElementById("loginErr");
+    err.style.display="block";err.innerText="パスワードが違います";
+  }
+}
+
+function adminLogout(){ authed=false; document.getElementById("adminLogin").style.display="block"; document.getElementById("adminMain").style.display="none"; document.getElementById("adminPass").value=""; }
+
+// ==========================================
+// サマリー
+// ==========================================
+function renderSummary(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var upcoming=bookings.filter(function(b){return new Date(b.date+"T00:00:00")>=today;});
+  var unconf=bookings.filter(function(b){return b.status==="未確認";});
+  document.getElementById("admSummary").innerHTML=
+    '<div class="sum-card"><div class="sum-num">'+bookings.length+'</div><div class="sum-lbl">合計</div></div>'+
+    '<div class="sum-card"><div class="sum-num">'+upcoming.length+'</div><div class="sum-lbl">予定</div></div>'+
+    '<div class="sum-card"><div class="sum-num">'+unconf.length+'</div><div class="sum-lbl">未確認</div></div>';
+}
+
+// ==========================================
+// 管理：日程設定カレンダー
+// ==========================================
+function admRender(){
+  var grid=document.getElementById("admGrid");
+  grid.innerHTML="";
+  document.getElementById("admTitle").innerText=admYear+"年 "+(admMonth+1)+"月";
+  var today=new Date();today.setHours(0,0,0,0);
+  var firstDay=new Date(admYear,admMonth,1).getDay();
+  var dim=new Date(admYear,admMonth+1,0).getDate();
+
+  for(var i=0;i<firstDay;i++){var e=document.createElement("div");e.className="adm-cell";grid.appendChild(e);}
+
+  for(var d=1;d<=dim;d++){
+    var date=new Date(admYear,admMonth,d);
+    var ds=toDS(date);
+    var dow=date.getDay();
+    var isWe=dow===0||dow===6;
+    var isToday=date.getTime()===today.getTime();
+    var times=schedule[ds]||[];
+    var isSet=times.length>0;
+
+    var cell=document.createElement("div");
+    var cls="adm-cell";
+    if(isWe) cls+=" adm-off";
+    else if(isSet) cls+=" adm-set";
+    else cls+=" adm-noset";
+    if(isToday) cls+=" today";
+    if(admSelDate===ds) cls+=" adm-sel";
+    cell.className=cls;
+
+    var html='<div class="adm-dnum">'+d+'</div>';
+    if(!isWe){
+      if(isSet) html+='<div class="adm-cnt" style="font-size:10px">'+times.length+'枠</div>';
+      else html+='<div class="adm-cnt" style="font-size:10px">未設定</div>';
+      cell.onclick=(function(ds2,dt2){return function(){admSelect(ds2,dt2);};})(ds,date);
+    }
+    cell.innerHTML=html;
+    grid.appendChild(cell);
+  }
+}
+
+function admSelect(ds,dateObj){
+  admSelDate=ds; admRender();
+  document.getElementById("admDateLbl").innerText=fmtDate(ds)+" の設定";
+  var currentTimes=schedule[ds]||[];
+  var grid=document.getElementById("admTimeGrid");
+  grid.innerHTML="";
+  ALL_TIMES.forEach(function(t){
+    var checked=currentTimes.indexOf(t)!==-1;
+    var div=document.createElement("div");
+    div.className="time-chk"+(checked?" checked":"");
+    div.innerHTML='<input type="checkbox" value="'+t+'"'+(checked?" checked":"")+'>'+t;
+    div.querySelector("input").addEventListener("change",function(){
+      div.className="time-chk"+(this.checked?" checked":"");
     });
+    grid.appendChild(div);
+  });
+  document.getElementById("admForm").style.display="block";
+  document.getElementById("admMsg").style.display="none";
+  document.getElementById("admForm").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function admPrev(){ admMonth--; if(admMonth<0){admMonth=11;admYear--;} admSelDate=null; document.getElementById("admForm").style.display="none"; admRender(); }
+function admNext(){ admMonth++; if(admMonth>11){admMonth=0;admYear++;} admSelDate=null; document.getElementById("admForm").style.display="none"; admRender(); }
+
+// ==========================================
+// 日程保存
+// ==========================================
+function saveSchedule(){
+  var times=[];
+  document.querySelectorAll("#admTimeGrid input:checked").forEach(function(el){times.push(el.value);});
+  if(times.length===0){showMsg("admMsg","少なくとも1つ時間を選択してください。",false);return;}
+
+  fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"saveSchedule",date:admSelDate,times:times,pass:ADMIN_PASS})})
+    .then(function(r){return r.json();})
+    .then(function(result){
+      if(result.status==="ok"){
+        schedule[admSelDate]=times;
+        showMsg("admMsg","保存しました！",true);
+        admRender(); bookRender();
+      } else {
+        showMsg("admMsg",result.message||"エラーが発生しました。",false);
+      }
+    })
+    .catch(function(){showMsg("admMsg","通信エラーが発生しました。",false);});
+}
+
+function deleteSchedule(){
+  if(!confirm(fmtDate(admSelDate)+"を休業日にしますか？")) return;
+  fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"deleteSchedule",date:admSelDate,pass:ADMIN_PASS})})
+    .then(function(r){return r.json();})
+    .then(function(result){
+      if(result.status==="ok"){
+        delete schedule[admSelDate];
+        showMsg("admMsg","休業日に設定しました。",true);
+        admSelDate=null;
+        document.getElementById("admForm").style.display="none";
+        admRender(); bookRender();
+      } else {
+        showMsg("admMsg",result.message||"エラーが発生しました。",false);
+      }
+    })
+    .catch(function(){showMsg("admMsg","通信エラーが発生しました。",false);});
+}
+
+// ==========================================
+// 予約一覧
+// ==========================================
+function renderBkList(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var filters=["すべて","未確認","確認済","完了","キャンセル"];
+  var frow=document.getElementById("admFilter");
+  frow.innerHTML="";
+  filters.forEach(function(f){
+    var btn=document.createElement("button");
+    btn.className="filter-btn"+(admFilter===f?" on":"");
+    btn.innerText=f;
+    btn.onclick=function(){admFilter=f;renderBkList();};
+    frow.appendChild(btn);
+  });
+
+  var sorted=bookings.slice().sort(function(a,b){return a.date+a.time>b.date+b.time?1:-1;});
+  var filtered=admFilter==="すべて"?sorted:sorted.filter(function(b){return b.status===admFilter;});
+
+  var list=document.getElementById("admBkList");
+  if(filtered.length===0){list.innerHTML='<div class="m-loading">該当する予約はありません</div>';return;}
+
+  list.innerHTML="";
+  filtered.forEach(function(b){
+    var isUp=new Date(b.date+"T00:00:00")>=today;
+    var sc=(STATUS_C[b.status||"未確認"]||"#f0f0f0,#555").split(",");
+    var item=document.createElement("div");
+    item.className="bk-item";
+    item.style.opacity=isUp?"1":"0.6";
+    item.innerHTML=
+      '<div class="bk-info">'+
+        '<div class="bk-name">'+b.name+'</div>'+
+        '<div class="bk-meta">'+fmtDate(b.date)+' '+b.time+(b.note?' · '+b.note.slice(0,20):'')+'</div>'+
+      '</div>'+
+      '<select class="status-sel" style="background:'+sc[0]+';color:'+sc[1]+';border-color:'+sc[1]+'">'+
+        STATUSES.map(function(s){return'<option value="'+s+'"'+(b.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
+      '</select>'+
+      '<button class="bk-del">×</button>';
+
+    item.querySelector(".status-sel").onchange=function(){
+      var newStatus=this.value;
+      fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"updateStatus",id:b.id,status:newStatus,pass:ADMIN_PASS})})
+        .then(function(r){return r.json();})
+        .then(function(result){if(result.status==="ok"){b.status=newStatus;renderBkList();renderSummary();}});
+    };
+    item.querySelector(".bk-del").onclick=function(){
+      if(!confirm(b.name+"さんの予約を削除しますか？")) return;
+      fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"delete",id:b.id,pass:ADMIN_PASS})})
+        .then(function(r){return r.json();})
+        .then(function(result){if(result.status==="ok"){bookings=bookings.filter(function(x){return x.id!==b.id;});renderBkList();renderSummary();}});
+    };
+    list.appendChild(item);
+  });
+}
+
+// ==========================================
+// メッセージ表示
+// ==========================================
+function showMsg(id,text,ok){
+  var el=document.getElementById(id);
+  el.style.display="block";
+  el.style.background=ok?"#d4edda":"#f8d7da";
+  el.style.color=ok?"#155724":"#721c24";
+  el.innerText=text;
+}
 </script>
-
 </body>
 </html>
