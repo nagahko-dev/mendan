@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>面談予約システム</title>
+    <style>
+        body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 450px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #185FA5; font-size: 24px; text-align: center; margin-bottom: 20px; }
+        label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        button { margin-top: 25px; width: 100%; padding: 12px; background-color: #185FA5; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #12467a; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #message { margin-top: 20px; padding: 15px; border-radius: 6px; display: none; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📅 面談予約フォーム</h1>
+    <form id="reservationForm">
+        <label for="date">希望日</label>
+        <input type="date" id="date" required>
+
+        <label for="time">希望時間</label>
+        <select id="time" required disabled>
+            <option value="">先に日付を選んでください</option>
+        </select>
+
+        <label for="name">お子様氏名</label>
+        <input type="text" id="name" placeholder="山田 太郎" required>
+
+        <label for="note">備考（あれば）</label>
+        <textarea id="note" rows="3"></textarea>
+
+        <button type="submit" id="submitBtn">予約を確定する</button>
+    </form>
+    <div id="message"></div>
+</div>
+
+<script>
+    // ==========================================
+    // 設定エリア
+    // ==========================================
+    var GAS_URL = "https://script.google.com/macros/s/AKfycbwHojwQQlo8O3vfk6g30xjsdNlu5PkCTJX24krufTII-EeZUneCsi-RAg7A86Ac-mxFCQ/exec";
+
+    // 選択肢として表示する時間帯
+    const AVAILABLE_TIMES = ["10:00", "11:00", "13:00", "14:00", "15:00"];
+
+    // ==========================================
+    // 予約状況のチェック処理
+    // ==========================================
+    const dateInput = document.getElementById('date');
+    const timeSelect = document.getElementById('time');
+
+    dateInput.addEventListener('change', function() {
+        const selectedDate = this.value;
+        if (!selectedDate) return;
+
+        timeSelect.disabled = true;
+        timeSelect.innerHTML = '<option value="">空き状況を確認中...</option>';
+
+        fetch(GAS_URL + "?action=list")
+            .then(res => res.json())
+            .then(data => {
+                const bookings = data.bookings || [];
+
+                const bookedTimes = bookings
+                    .filter(b => b.date === selectedDate)
+                    .map(b => b.time);
+
+                timeSelect.innerHTML = '<option value="">時間を選択してください</option>';
+
+                AVAILABLE_TIMES.forEach(t => {
+                    if (bookedTimes.includes(t)) return; // 予約済みは表示しない
+                    const option = document.createElement('option');
+                    option.value = t;
+                    option.text = t;
+                    timeSelect.appendChild(option);
+                });
+
+                // 空きがない場合
+                if (timeSelect.options.length === 1) {
+                    timeSelect.innerHTML = '<option value="">この日は満席です</option>';
+                }
+
+                timeSelect.disabled = false;
+            })
+            .catch(err => {
+                timeSelect.innerHTML = '<option value="">読み込み失敗。再試行してください</option>';
+                timeSelect.disabled = false;
+            });
+    });
+
+    // ==========================================
+    // 送信処理
+    // ==========================================
+    document.getElementById('reservationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = document.getElementById('submitBtn');
+        var msg = document.getElementById('message');
+
+        btn.disabled = true;
+        btn.innerText = "送信中...";
+        msg.style.display = "none";
+
+        var data = {
+            action: "add",
+            booking: {
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                name: document.getElementById('name').value,
+                note: document.getElementById('note').value
+            }
+        };
+
+        fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.status === "ok") {
+                msg.style.display = "block";
+                msg.style.backgroundColor = "#d4edda";
+                msg.style.color = "#155724";
+                msg.innerText = "予約が完了しました！";
+                document.getElementById('reservationForm').reset();
+                timeSelect.disabled = true;
+                timeSelect.innerHTML = '<option value="">先に日付を選んでください</option>';
+            } else {
+                throw new Error();
+            }
+        })
+        .catch(err => {
+            msg.style.display = "block";
+            msg.style.backgroundColor = "#f8d7da";
+            msg.style.color = "#721c24";
+            msg.innerText = "エラーが発生しました。もう一度お試しください。";
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = "予約を確定する";
+        });
+    });
+</script>
+
+</body>
+</html>
